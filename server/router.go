@@ -1,7 +1,9 @@
 package server
 
 import (
+	// The Gin web framework
 	"github.com/gin-gonic/gin"
+	// The Go ORM
 	"gorm.io/gorm"
 )
 
@@ -50,6 +52,7 @@ func addDatabaseMiddleware(r *gin.Engine) {
 
 // adds routes to the server
 func addRoutes(r *gin.Engine) {
+	// Test ping route
 	r.GET("/ping", func(c *gin.Context) {
 		var counter Counter
 		if err := GetDB(c).FirstOrCreate(&counter).Error; err != nil {
@@ -60,5 +63,9 @@ func addRoutes(r *gin.Engine) {
 			panic(err)
 		}
 		c.JSON(200, &counter)
+	})
+	// Test 'hello' route
+	r.GET("/hello", func(c *gin.Context) {
+		c.String(200, "Hello!")
 	})
 }
