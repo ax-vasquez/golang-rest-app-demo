@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// Counter database model used to track visit count for the given ID
 type Counter struct {
 	ID    uint `gorm:"primarykey" json:"-"`
 	Visit uint `gorm:"default:0" json:"visit"`

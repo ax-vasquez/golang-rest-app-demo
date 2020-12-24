@@ -7,8 +7,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// ContextKeyDB the key name for the database within the Gin context
 const ContextKeyDB = "db"
 
+// SetupRouter completes setup of the router, middleware, db middleware and routes and returns the default Engine instance
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 	addMiddleware(r)
@@ -17,7 +19,7 @@ func SetupRouter() *gin.Engine {
 	return r
 }
 
-// retrieves the database from the request context
+// GetDB retrieves the database from the request context
 func GetDB(c *gin.Context) *gorm.DB {
 	value, ok := c.Get(ContextKeyDB)
 	if !ok {
