@@ -1,14 +1,52 @@
 package server
 
 import (
+	"time"
+
+	uuid "github.com/satori/go.uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+// CustomModel is the base model struct for all models used in this project - it emulates gorm.Model except that it uses a UUID for the ID field
+type CustomModel struct {
+	ID        uuid.UUID `gorm:"type:uuid;primary_key;" json:"id"`
+	CreatedAt time.Time `gorm:"autoCreateTime:mili"  json:"createdAt"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime:mili"  json:"updatedAt"`
+	DeletedAt time.Time `json:"deletedAt"`
+}
 
 // Counter database model used to track visit count for the given ID
 type Counter struct {
 	ID    uint `gorm:"primarykey" json:"-"`
 	Visit uint `gorm:"default:0" json:"visit"`
+}
+
+// CreateUserInput model used when binding the input from a POST body to create a new User record
+type CreateUserInput struct {
+	Username string `json:"username"`
+}
+
+// User database model representing the data collected for a user
+type User struct {
+	CustomModel
+	Username string `json:"username"`
+}
+
+// Session database model representing the data for an arbitrary game session
+type Session struct {
+	CustomModel
+	// The list of feedback responses from users for the given Session
+	Feedback []SessionFeedback `gorm:"foreignKey:ID"`
+}
+
+// SessionFeedback database model representing the data for an arbitrary feedback response from a user about an arbitrary game session
+type SessionFeedback struct {
+	CustomModel
+	// A rating of 1 to 5 (1 being the "worst", 5 being the "best")
+	Rating int `gorm:"not null" json:"rating"`
+	// An optional comment where the player can describe their experience in a small comment
+	Comment string `json:"comment"`
 }
 
 func initDB() *gorm.DB {
@@ -18,7 +56,14 @@ func initDB() *gorm.DB {
 	}
 
 	// Migrate the schema
-	err = db.AutoMigrate(&Counter{})
+	err = db.AutoMigrate(
+		&CustomModel{},
+		&Counter{},
+		&CreateUserInput{},
+		&User{},
+		&Session{},
+		&SessionFeedback{},
+	)
 	if err != nil {
 		panic(err)
 	}

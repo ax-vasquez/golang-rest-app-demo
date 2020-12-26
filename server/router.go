@@ -1,9 +1,8 @@
 package server
 
 import (
-	// The Gin web framework
 	"github.com/gin-gonic/gin"
-	// The Go ORM
+	uuid "github.com/satori/go.uuid"
 	"gorm.io/gorm"
 )
 
@@ -55,19 +54,27 @@ func addDatabaseMiddleware(r *gin.Engine) {
 // adds routes to the server
 func addRoutes(r *gin.Engine) {
 	// Test ping route
+	// r.GET("/ping", func(c *gin.Context) {
+	// 	var counter Counter
+	// 	if err := GetDB(c).FirstOrCreate(&counter).Error; err != nil {
+	// 		panic(err)
+	// 	}
+	// 	counter.Visit++
+	// 	if err := GetDB(c).Save(&counter).Error; err != nil {
+	// 		panic(err)
+	// 	}
+	// 	c.JSON(200, &counter)
+	// })
+	// Test ping route
 	r.GET("/ping", func(c *gin.Context) {
-		var counter Counter
-		if err := GetDB(c).FirstOrCreate(&counter).Error; err != nil {
-			panic(err)
-		}
-		counter.Visit++
-		if err := GetDB(c).Save(&counter).Error; err != nil {
-			panic(err)
-		}
-		c.JSON(200, &counter)
+		c.String(200, "ping")
 	})
-	// Test 'hello' route
-	r.GET("/hello", func(c *gin.Context) {
-		c.String(200, "Hello!")
+	r.POST("/sessions/create", func(c *gin.Context) {
+		var session Session
+		if err := GetDB(c).Create(&session).Error; err != nil {
+			panic(err)
+		}
+		session.ID = uuid.NewV4()
+		c.JSON(200, &session)
 	})
 }
