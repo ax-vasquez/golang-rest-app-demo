@@ -71,10 +71,15 @@ func addRoutes(r *gin.Engine) {
 	})
 	r.POST("/sessions/create", func(c *gin.Context) {
 		var session Session
+		session.ID = uuid.NewV4()
 		if err := GetDB(c).Create(&session).Error; err != nil {
 			panic(err)
 		}
-		session.ID = uuid.NewV4()
 		c.JSON(200, &session)
+	})
+	r.GET("/sessions", func(c *gin.Context) {
+		var records []Session
+		GetDB(c).Find(&records)
+		c.JSON(200, records)
 	})
 }

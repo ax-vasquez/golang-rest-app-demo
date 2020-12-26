@@ -22,6 +22,12 @@ The task is to do the following:
    4.  [ ] Authentication
    5.  [ ] User permissions
 
+### Resources
+* https://blog.logrocket.com/how-to-build-a-rest-api-with-golang-using-gin-and-gorm/
+* https://stackoverflow.com/questions/30461895/the-differences-between-int-and-uuid-in-mysql/30462400
+  * I decided to use UUID simply because it technically should be safe to integrate separate DB instances if they use UUIDs as the Identifiers
+  * Using `uint` means the record will only be unique to the database instance; merging with another database would not be possible (at least, not safely - PK conflicts would be very likely to occur)
+
 ## Original README
 
 ### Golang Starter Framework
