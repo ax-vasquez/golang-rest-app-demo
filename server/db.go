@@ -22,22 +22,26 @@ type Counter struct {
 	Visit uint `gorm:"default:0" json:"visit"`
 }
 
-// CreateUserInput model used when binding the input from a POST body to create a new User record
-type CreateUserInput struct {
-	Username string `json:"username"`
-}
-
 // User database model representing the data collected for a user
 type User struct {
 	CustomModel
-	Username string `json:"username"`
 }
 
 // Session database model representing the data for an arbitrary game session
 type Session struct {
 	CustomModel
 	// The list of feedback responses from users for the given Session
-	Feedback []SessionFeedback `gorm:"foreignKey:ID"`
+	Feedback []SessionFeedback `gorm:"foreignKey:ID" json:"feedback"`
+}
+
+// CreateSessionFeedbackInput represents the fields expected when the session feedback endpoint is hit with a POST request
+type CreateSessionFeedbackInput struct {
+	// The ID of the session being reviewed
+	SessionID uuid.UUID `json:"sessionId"`
+	// The ID of the user who left the review
+	UserID uuid.UUID `json:"userId"`
+	Rating int `json:"rating"`
+	Comment string `json:"comment"`
 }
 
 // SessionFeedback database model representing the data for an arbitrary feedback response from a user about an arbitrary game session
@@ -59,7 +63,6 @@ func initDB() *gorm.DB {
 	err = db.AutoMigrate(
 		&CustomModel{},
 		&Counter{},
-		&CreateUserInput{},
 		&User{},
 		&Session{},
 		&SessionFeedback{},

@@ -1,6 +1,8 @@
 package server
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	uuid "github.com/satori/go.uuid"
 	"gorm.io/gorm"
@@ -69,17 +71,72 @@ func addRoutes(r *gin.Engine) {
 	r.GET("/ping", func(c *gin.Context) {
 		c.String(200, "ping")
 	})
-	r.POST("/sessions/create", func(c *gin.Context) {
-		var session Session
-		session.ID = uuid.NewV4()
-		if err := GetDB(c).Create(&session).Error; err != nil {
-			panic(err)
-		}
-		c.JSON(200, &session)
-	})
+	// List all sessions
 	r.GET("/sessions", func(c *gin.Context) {
 		var records []Session
 		GetDB(c).Find(&records)
 		c.JSON(200, records)
+	})
+	// Create an arbitrary game session
+	r.POST("/sessions/create", func(c *gin.Context) {
+		var session Session
+		session.ID = uuid.NewV4()
+		if err := GetDB(c).Create(&session).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(200, &session)
+	})
+	// TODO: Look into how to do wildcards in routes with gin
+	// Leave feedback for a given session ID
+	r.POST("/sessions/feedback", func(c *gin.Context) {
+		var input CreateSessionFeedbackInput
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		session := GetDB(c).Find(&Session{}, input.SessionID)
+		// TODO: Figure out why this is broken - I've already made sure input is correct through independent testing - the issue is here
+		GetDB(c).Model(&session).Association("Feedback").Append(&SessionFeedback{Rating: input.Rating, Comment: input.Comment})
+	})
+	// List all users
+	r.GET("/users", func(c *gin.Context) {
+		var records []User
+		GetDB(c).Find(&records)
+		c.JSON(200, records)
+	})
+	// Create an arbitrary user
+	r.POST("/users/create", func(c *gin.Context) {
+		var user User
+		user.ID = uuid.NewV4()
+		if err := GetDB(c).Create(&user).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(200, &user)
+	})
+	// Reset the local database (TESTING PURPOSES ONLY)
+	r.POST("/data/flush", func(c *gin.Context) {
+		if err := GetDB(c).Migrator().DropTable(
+			&CustomModel{},
+			&Counter{},
+			&User{},
+			&Session{},
+			&SessionFeedback{},
+		); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if err := GetDB(c).AutoMigrate(
+			&CustomModel{},
+			&Counter{},
+			&User{},
+			&Session{},
+			&SessionFeedback{},
+		); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"success": true})
 	})
 }
