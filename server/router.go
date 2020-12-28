@@ -74,6 +74,7 @@ func addRoutes(r *gin.Engine) {
 	// List all sessions
 	r.GET("/sessions", func(c *gin.Context) {
 		var records []Session
+		// TODO: Figure out how to get this to return related records (or figure out if there is a problem with adding the related records)
 		GetDB(c).Find(&records)
 		c.JSON(200, records)
 	})
@@ -97,13 +98,16 @@ func addRoutes(r *gin.Engine) {
 		}
 		var sessionFeedback SessionFeedback
 		GetDB(c).Where(&SessionFeedback{SessionID: input.SessionID, UserID: input.UserID}).Find(&sessionFeedback)
+		// Stop execution early (saving processing time) if the user has already provided feedback for this Session
 		if sessionFeedback.ID != uuid.Nil {
 			c.JSON(http.StatusForbidden, gin.H{"success": false, "message": "This user has already provided feedback for the given session"})
 			return
 		}
 		var session Session
+		// Defines session with the first Session record found by the given input.SessionID
 		GetDB(c).First(&session, input.SessionID)
 		var user User
+		// Defines user with the first User record found by the given input.UserID
 		GetDB(c).First(&user, input.UserID)
 		sessionFeedback.ID = uuid.NewV4()
 		sessionFeedback.Rating = input.Rating
