@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	uuid "github.com/satori/go.uuid"
@@ -129,8 +130,36 @@ func addRoutes(r *gin.Engine) {
 	// Get session feedback
 	r.GET("/sessions/feedback", func(c *gin.Context) {
 		var records []SessionFeedback
-		GetDB(c).Find(&records)
-		c.JSON(200, records)
+		query := c.Request.URL.Query()
+		if sessionID := query["sessionId"]; sessionID != nil {
+			if rating := query["rating"]; rating != nil {
+				if ratingInt, err := strconv.Atoi(rating[0]); err == nil {
+					GetDB(c).Where("session_id = ? AND rating = ?", sessionID[0], ratingInt).Find(&records)
+					c.JSON(200, records)
+					return
+				} else if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+				GetDB(c).Where("sessionId = ?", sessionID[0]).Find(&records)
+				c.JSON(200, records)
+				return
+			}
+		} else {
+			if rating := query["rating"]; rating != nil {
+				if ratingInt, err := strconv.Atoi(rating[0]); err == nil {
+					GetDB(c).Where("rating = ?", ratingInt).Find(&records)
+					c.JSON(200, records)
+					return
+				} else if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+			}
+			GetDB(c).Find(&records)
+			c.JSON(200, records)
+			return
+		}
 	})
 	// List all users
 	r.GET("/users", func(c *gin.Context) {
