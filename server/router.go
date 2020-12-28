@@ -150,7 +150,7 @@ func addRoutes(r *gin.Engine) {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					return
 				}
-				GetDB(c).Where("sessionId = ?", sessionID[0]).Find(&records)
+				GetDB(c).Where("session_id = ?", sessionID[0]).Find(&records)
 				c.JSON(200, records)
 				return
 			}
