@@ -97,6 +97,11 @@ func addRoutes(r *gin.Engine) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		// If any required fields are invalid, return before doing any processing
+		if input.Rating < 1 || input.Rating > 5 || input.SessionID == uuid.Nil || input.UserID == uuid.Nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid values for query parameters - sessionId and userId must be defined and rating must be 1 - 5"})
+			return
+		}
 		var sessionFeedback SessionFeedback
 		GetDB(c).Where(&SessionFeedback{SessionID: input.SessionID, UserID: input.UserID}).Find(&sessionFeedback)
 		// Stop execution early (saving processing time) if the user has already provided feedback for this Session
@@ -134,6 +139,10 @@ func addRoutes(r *gin.Engine) {
 		if sessionID := query["sessionId"]; sessionID != nil {
 			if rating := query["rating"]; rating != nil {
 				if ratingInt, err := strconv.Atoi(rating[0]); err == nil {
+					if ratingInt > 5 || ratingInt < 1 {
+						c.JSON(http.StatusBadRequest, gin.H{"error": "Rating must be between 1 and 5"})
+						return
+					}
 					GetDB(c).Where("session_id = ? AND rating = ?", sessionID[0], ratingInt).Find(&records)
 					c.JSON(200, records)
 					return
@@ -148,6 +157,10 @@ func addRoutes(r *gin.Engine) {
 		} else {
 			if rating := query["rating"]; rating != nil {
 				if ratingInt, err := strconv.Atoi(rating[0]); err == nil {
+					if ratingInt > 5 || ratingInt < 1 {
+						c.JSON(http.StatusBadRequest, gin.H{"error": "Rating must be between 1 and 5"})
+						return
+					}
 					GetDB(c).Where("rating = ?", ratingInt).Find(&records)
 					c.JSON(200, records)
 					return

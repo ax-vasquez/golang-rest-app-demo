@@ -4,10 +4,10 @@ This repository is modeled loosely after a takehome task I had for an interview 
 
 The task is to do the following:
 1. [ ] An endpoint where users can leave feedback for a specific game session
-   1. [ ] A user can only submit one review per game session
+   1. [x] A user can only submit one review per game session
    2. [ ] User MUST leave a rating of 1-5 if providing feedback
-   3. [ ] User MAY add a comment when providing feedback
-   4. [ ] Multiple players can rate the same session
+   3. [x] User MAY add a comment when providing feedback
+   4. [x] Multiple players can rate the same session
 2. [ ] Folloing RESTful principles, create HTTP endpoints to allow:
    1. [ ] Players to add feedback for a session
    2. [ ] Ops team members to see recent feedback left by players
@@ -21,12 +21,6 @@ The task is to do the following:
    3.  [ ] Deployment scripts/tools
    4.  [ ] Authentication
    5.  [ ] User permissions
-
-### Resources
-* https://blog.logrocket.com/how-to-build-a-rest-api-with-golang-using-gin-and-gorm/
-* https://stackoverflow.com/questions/30461895/the-differences-between-int-and-uuid-in-mysql/30462400
-  * I decided to use UUID simply because it technically should be safe to integrate separate DB instances if they use UUIDs as the Identifiers
-  * Using `uint` means the record will only be unique to the database instance; merging with another database would not be possible (at least, not safely - PK conflicts would be very likely to occur)
 
 ## Original README
 
