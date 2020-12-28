@@ -95,9 +95,38 @@ func addRoutes(r *gin.Engine) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		session := GetDB(c).Find(&Session{}, input.SessionID)
-		// TODO: Figure out why this is broken - I've already made sure input is correct through independent testing - the issue is here
-		GetDB(c).Model(&session).Association("Feedback").Append(&SessionFeedback{Rating: input.Rating, Comment: input.Comment})
+		var sessionFeedback SessionFeedback
+		GetDB(c).Where(&SessionFeedback{SessionID: input.SessionID, UserID: input.UserID}).Find(&sessionFeedback)
+		if sessionFeedback.ID != uuid.Nil {
+			c.JSON(http.StatusForbidden, gin.H{"success": false, "message": "This user has already provided feedback for the given session"})
+			return
+		}
+		var session Session
+		GetDB(c).First(&session, input.SessionID)
+		var user User
+		GetDB(c).First(&user, input.UserID)
+		sessionFeedback.ID = uuid.NewV4()
+		sessionFeedback.Rating = input.Rating
+		sessionFeedback.Comment = input.Comment
+		session.SessionFeedback = []SessionFeedback{sessionFeedback}
+		// Update the session with the feedback (inserts the feedback record into the DB)
+		if err := GetDB(c).Updates(&session).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		// Update the user with the feedback (doesn't perform insert this time since it already exists - just updates the User record)
+		user.SessionFeedback = []SessionFeedback{sessionFeedback}
+		if err := GetDB(c).Updates(&user).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"success": true, "message": "Thank you for your feedback!"})
+	})
+	// Get session feedback
+	r.GET("/sessions/feedback", func(c *gin.Context) {
+		var records []SessionFeedback
+		GetDB(c).Find(&records)
+		c.JSON(200, records)
 	})
 	// List all users
 	r.GET("/users", func(c *gin.Context) {
@@ -114,29 +143,5 @@ func addRoutes(r *gin.Engine) {
 			return
 		}
 		c.JSON(200, &user)
-	})
-	// Reset the local database (TESTING PURPOSES ONLY)
-	r.POST("/data/flush", func(c *gin.Context) {
-		if err := GetDB(c).Migrator().DropTable(
-			&CustomModel{},
-			&Counter{},
-			&User{},
-			&Session{},
-			&SessionFeedback{},
-		); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		if err := GetDB(c).AutoMigrate(
-			&CustomModel{},
-			&Counter{},
-			&User{},
-			&Session{},
-			&SessionFeedback{},
-		); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"success": true})
 	})
 }

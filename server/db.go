@@ -25,13 +25,13 @@ type Counter struct {
 // User database model representing the data collected for a user
 type User struct {
 	CustomModel
+	SessionFeedback []SessionFeedback `json:"sessionFeedback"`
 }
 
 // Session database model representing the data for an arbitrary game session
 type Session struct {
 	CustomModel
-	// The list of feedback responses from users for the given Session
-	Feedback []SessionFeedback `gorm:"foreignKey:ID" json:"feedback"`
+	SessionFeedback []SessionFeedback `json:"feedback"`
 }
 
 // CreateSessionFeedbackInput represents the fields expected when the session feedback endpoint is hit with a POST request
@@ -39,9 +39,9 @@ type CreateSessionFeedbackInput struct {
 	// The ID of the session being reviewed
 	SessionID uuid.UUID `json:"sessionId"`
 	// The ID of the user who left the review
-	UserID uuid.UUID `json:"userId"`
-	Rating int `json:"rating"`
-	Comment string `json:"comment"`
+	UserID  uuid.UUID `json:"userId"`
+	Rating  int       `json:"rating"`
+	Comment string    `json:"comment"`
 }
 
 // SessionFeedback database model representing the data for an arbitrary feedback response from a user about an arbitrary game session
@@ -51,6 +51,10 @@ type SessionFeedback struct {
 	Rating int `gorm:"not null" json:"rating"`
 	// An optional comment where the player can describe their experience in a small comment
 	Comment string `json:"comment"`
+	// FK
+	SessionID uuid.UUID
+	// FK
+	UserID uuid.UUID
 }
 
 func initDB() *gorm.DB {
@@ -61,7 +65,6 @@ func initDB() *gorm.DB {
 
 	// Migrate the schema
 	err = db.AutoMigrate(
-		&CustomModel{},
 		&Counter{},
 		&User{},
 		&Session{},
