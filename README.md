@@ -3,18 +3,18 @@
 This repository is modeled loosely after a takehome task I had for an interview I did with Unity Technologies. As a Node.js developer, I did the task in Node, but I would like to learn Golang. This seemed like a perfect opportunity to leverage my REST experience so that I could learn Golang.
 
 The task is to do the following:
-1. [ ] An endpoint where users can leave feedback for a specific game session
+1. [x] An endpoint where users can leave feedback for a specific game session
    1. [x] A user can only submit one review per game session
-   2. [ ] User MUST leave a rating of 1-5 if providing feedback
+   2. [x] User MUST leave a rating of 1-5 if providing feedback
    3. [x] User MAY add a comment when providing feedback
    4. [x] Multiple players can rate the same session
-2. [ ] Folloing RESTful principles, create HTTP endpoints to allow:
-   1. [ ] Players to add feedback for a session
-   2. [ ] Ops team members to see recent feedback left by players
-   3. [ ] Allow filtering by rating
-3. [ ] Include a README that includes at least the following:
-   1. [ ] API Documentation
-   2. [ ] Instructions for launching and testing your API locally (if not the built-in scripts)
+2. [x] Folloing RESTful principles, create HTTP endpoints to allow:
+   1. [x] Players to add feedback for a session
+   2. [x] Ops team members to see recent feedback left by players
+   3. [x] Allow filtering by rating
+3. [x] Include a README that includes at least the following:
+   1. [x] API Documentation
+   2. [x] Instructions for launching and testing your API locally (if not the built-in scripts)
 4. [ ] Bonus items
    1.  [ ] A simple front-end
    2.  [ ] Tests
@@ -22,37 +22,40 @@ The task is to do the following:
    4.  [ ] Authentication
    5.  [ ] User permissions
 
-## Original README
+## Testing
 
-### Golang Starter Framework
+### Starting the service locally
+1. Run `make all`
+2. Run `make run`
+3. Begin testing
 
-#### Getting Started With Go
-We currently use the latest version of Go 1.13. You can [download it from the go website](https://golang.org/dl/). 
-Click on "Archived versions" to find 1.13.
+> #### Schema changes
+> Whenever you have a schema change (e.g., whenever you add/remove, or otherwise update gorm models), you will likely run into issues when starting the service. **This is most-likely a result of the schema no longer matching that of the one that exists within the `test.db` file**.
+> 
+> The fastest way around this is to simply delete the `test.db` file and re-run `make run`, which will generate a new `test.db` file with the new schema. At this point, the project should build successfully.
 
-Why do we use it? Go 1.13 is the latest version supported by Google Cloud Functions. 
-Since we use their cloud functions we pin our development version to theirs.
+### API Documentation
+#### Creating test resources
+* **User**
+  * Send `POST` to `/users/create`
+  * Does not require a post-body
+* **Session**
+  * Send `POST` to `/sessions/create`
+* **SessionFeedback**
+  * Send `POST` to `/sessions/feedback`
+  * Pass the following parameters in the POST body:
+    * `sessionId`: the UUID of the Session being reviewed
+    * `userId`: the UUID of the user posting the feedback
+    * `rating`: the rating for the Session (1-5)
+    * (optional) `comment`: Optional comment for the feedback
 
-Feel free to use the latest stable version. It'll probably work just fine, but please update the version in go.mod
-if you do so, so we can easily test your code.
- 
-#### Makefile targets
-We've created a basic Makefile that is already setup with standard go tools. The following targets are available:
-
-**clean**: cleans the project
-
-**build**: builds cmd/main.go
-
-**run**: starts the project webserver (defaults to port 8080)
-
-**lint**: lints your project for formatting issues
-
-**vet**: looks for suspicious constructs
-
-**secure**: looks for security problems
-
-**test**: runs tests in the project
-
-**show-coverage**: opens a web browser with a report of testing coverage
-
-**race**: tests for race conditions
+#### Querying resources
+* Get all users
+  * Send `GET` to `/users`
+* Get Sessions
+  * Send `GET` to `/sessions`
+* Get Session feedback
+  * Send `GET` to `/sessions/feedback`
+  * To get all feedback for a given session, send `GET` to `/sessions/feedback?sessionId=<SESSION_ID>`
+  * To get all feedback with a given rating, send `GET` to `/sessions/feedback?rating=<RATING>`
+  * To get all feedback for a given session with a given rating, send `GET` to `/sessions/feedback?sessionId=<SESSION_ID>&rating=<RATING>`
