@@ -16,14 +16,14 @@ type RouteTestSuite struct {
 	suite.Suite
 }
 
-func (s *RouteTestSuite) TestPingRoute() {
+func (s *RouteTestSuite) TestGetSessionsRoute() {
 	router := SetupRouter()
 
 	w := httptest.NewRecorder()
-	req, err := http.NewRequest("GET", "/ping", nil)
+	req, err := http.NewRequest("GET", "/sessions", nil)
 	s.NoError(err)
 	router.ServeHTTP(w, req)
 
 	s.Equal(200, w.Code)
-	s.Regexp(`\{"visit":\d+\}`, w.Body.String())
+	s.Regexp(`\[\]`, w.Body.String())
 }

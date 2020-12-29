@@ -2,3 +2,7 @@
 build
 coverage.out
 test.db
+# Prevent .swp files from being picked up in commits
+*.swp
+# Prevent potentially-sensitive information from being picked up in commits
+*.env
