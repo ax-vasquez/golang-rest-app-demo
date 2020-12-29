@@ -42,7 +42,7 @@ The task is to do the following:
 * **Session**
   * Send `POST` to `/sessions/create`
 * **SessionFeedback**
-  * Send `POST` to `/sessions/feedback`
+  * Send `POST` to `/sessions/feedback/create`
   * Pass the following parameters in the POST body:
     * `sessionId`: the UUID of the Session being reviewed
     * `userId`: the UUID of the user posting the feedback

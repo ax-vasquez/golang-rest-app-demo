@@ -91,7 +91,7 @@ func addRoutes(r *gin.Engine) {
 	})
 	// TODO: Look into how to do wildcards in routes with gin
 	// Leave feedback for a given session ID
-	r.POST("/sessions/feedback", func(c *gin.Context) {
+	r.POST("/sessions/feedback/create", func(c *gin.Context) {
 		var input CreateSessionFeedbackInput
 		if err := c.ShouldBindJSON(&input); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
