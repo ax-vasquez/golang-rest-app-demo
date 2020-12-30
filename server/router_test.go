@@ -17,10 +17,6 @@ type RouteTestSuite struct {
 	suite.Suite
 }
 
-type Struct struct {
-	Data []string `json:"data"`
-}
-
 // GetUserJSON is used when unmarshalling the response from GET /users
 type GetUserJSON struct {
 	Users []User `json:"users"`
