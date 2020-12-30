@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,6 +17,25 @@ type RouteTestSuite struct {
 	suite.Suite
 }
 
+type Struct struct {
+	Data []string `json:"data"`
+}
+
+// GetUserJSON is used when unmarshalling the response from GET /users
+type GetUserJSON struct {
+	Users []User `json:"users"`
+}
+
+// GetSessionJSON is used when unmarshalling the response from GET /sessions
+type GetSessionJSON struct {
+	Sessions []Session `json:"sessions"`
+}
+
+// GetFeedbackJSON is used when unmarshalling the response from GET /sessions/feedback
+type GetFeedbackJSON struct {
+	Feedback []SessionFeedback `json:"feedback"`
+}
+
 func (s *RouteTestSuite) TestGetSessionsRoute() {
 	router := SetupRouter()
 
@@ -26,7 +46,13 @@ func (s *RouteTestSuite) TestGetSessionsRoute() {
 
 	s.Equal(200, w.Code)
 	// Test empty response - should always be empty array
-	s.Regexp(`\[\]`, w.Body.String())
+	var response GetSessionJSON
+	err2 := json.Unmarshal([]byte(w.Body.String()), &response)
+	s.NoError(err2)
+
+	// Ensure the Sessions array is empty when the DB is in a fresh state
+	s.Assert().Equal(response.Sessions, make([]Session, 0))
+
 }
 
 func (s *RouteTestSuite) TestGetUsersRoute() {
@@ -39,18 +65,31 @@ func (s *RouteTestSuite) TestGetUsersRoute() {
 
 	s.Equal(200, w.Code)
 	// Test empty response - should always be empty array
-	s.Regexp(`\[\]`, w.Body.String())
+	var response GetUserJSON
+	err2 := json.Unmarshal([]byte(w.Body.String()), &response)
+	s.NoError(err2)
+
+	// Ensure the Users array is empty when the DB is in a fresh state
+	s.Assert().Equal(response.Users, make([]User, 0))
+
 }
 
 func (s *RouteTestSuite) TestGetSessionFeedbackRoute() {
 	router := SetupRouter()
-
 	w := httptest.NewRecorder()
-	req, err := http.NewRequest("GET", "/sessions/feedback", nil)
-	s.NoError(err)
-	router.ServeHTTP(w, req)
+	if req, err := http.NewRequest("GET", "/sessions/feedback", nil); err == nil {
+		router.ServeHTTP(w, req)
+		s.Equal(200, w.Code)
+		// Test empty response - should always be empty array
+		var response GetFeedbackJSON
+		err2 := json.Unmarshal([]byte(w.Body.String()), &response)
+		s.NoError(err2)
 
-	s.Equal(200, w.Code)
-	// Test empty response - should always be empty array
-	s.Regexp(`\[\]`, w.Body.String())
+		// TODO: Add db setup/teardown to the test logic (find the best place for this)
+		// Ensure the Feedback array is empty when the DB is in a fresh state
+		s.Assert().Equal(response.Feedback, make([]SessionFeedback, 0))
+	} else {
+		// If an error happened, then this assertion will always fail - added here simply for test failure reporting
+		s.NoError(err)
+	}
 }

@@ -77,7 +77,7 @@ func addRoutes(r *gin.Engine) {
 		var records []Session
 		// TODO: Figure out how to get this to return related records (or figure out if there is a problem with adding the related records)
 		GetDB(c).Find(&records)
-		c.JSON(200, records)
+		c.JSON(200, gin.H{"sessions": &records})
 	})
 	// Create an arbitrary game session
 	r.POST("/sessions/create", func(c *gin.Context) {
@@ -87,7 +87,7 @@ func addRoutes(r *gin.Engine) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(200, &session)
+		c.JSON(200, gin.H{"session": &session})
 	})
 	// TODO: Look into how to do wildcards in routes with gin
 	// Leave feedback for a given session ID
@@ -144,14 +144,14 @@ func addRoutes(r *gin.Engine) {
 						return
 					}
 					GetDB(c).Where("session_id = ? AND rating = ?", sessionID[0], ratingInt).Find(&records)
-					c.JSON(200, records)
+					c.JSON(200, gin.H{"feedback": &records})
 					return
 				} else if err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					return
 				}
 				GetDB(c).Where("session_id = ?", sessionID[0]).Find(&records)
-				c.JSON(200, records)
+				c.JSON(200, gin.H{"feedback": &records})
 				return
 			}
 		} else {
@@ -162,7 +162,7 @@ func addRoutes(r *gin.Engine) {
 						return
 					}
 					GetDB(c).Where("rating = ?", ratingInt).Find(&records)
-					c.JSON(200, records)
+					c.JSON(200, gin.H{"feedback": &records})
 					return
 				} else if err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -170,7 +170,7 @@ func addRoutes(r *gin.Engine) {
 				}
 			}
 			GetDB(c).Find(&records)
-			c.JSON(200, records)
+			c.JSON(200, gin.H{"feedback": &records})
 			return
 		}
 	})
@@ -178,7 +178,7 @@ func addRoutes(r *gin.Engine) {
 	r.GET("/users", func(c *gin.Context) {
 		var records []User
 		GetDB(c).Find(&records)
-		c.JSON(200, records)
+		c.JSON(200, gin.H{"users": &records})
 	})
 	// Create an arbitrary user
 	r.POST("/users/create", func(c *gin.Context) {
@@ -188,6 +188,6 @@ func addRoutes(r *gin.Engine) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(200, &user)
+		c.JSON(200, gin.H{"user": &user})
 	})
 }
