@@ -25,5 +25,32 @@ func (s *RouteTestSuite) TestGetSessionsRoute() {
 	router.ServeHTTP(w, req)
 
 	s.Equal(200, w.Code)
+	// Test empty response - should always be empty array
+	s.Regexp(`\[\]`, w.Body.String())
+}
+
+func (s *RouteTestSuite) TestGetUsersRoute() {
+	router := SetupRouter()
+
+	w := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "/users", nil)
+	s.NoError(err)
+	router.ServeHTTP(w, req)
+
+	s.Equal(200, w.Code)
+	// Test empty response - should always be empty array
+	s.Regexp(`\[\]`, w.Body.String())
+}
+
+func (s *RouteTestSuite) TestGetSessionFeedbackRoute() {
+	router := SetupRouter()
+
+	w := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "/sessions/feedback", nil)
+	s.NoError(err)
+	router.ServeHTTP(w, req)
+
+	s.Equal(200, w.Code)
+	// Test empty response - should always be empty array
 	s.Regexp(`\[\]`, w.Body.String())
 }
