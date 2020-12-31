@@ -44,6 +44,11 @@ type CreateSessionFeedbackInput struct {
 	Comment string    `json:"comment"`
 }
 
+// Input type modeling the expected input in the POST body when deleting a resource
+type DeleteResourceInput struct {
+	ID uuid.UUID `json:"id"`
+}
+
 // SessionFeedback database model representing the data for an arbitrary feedback response from a user about an arbitrary game session
 type SessionFeedback struct {
 	CustomModel
