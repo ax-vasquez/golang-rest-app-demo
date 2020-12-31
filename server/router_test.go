@@ -32,7 +32,7 @@ type GetFeedbackJSON struct {
 	Feedback []SessionFeedback `json:"feedback"`
 }
 
-func (s *RouteTestSuite) TestGetSessionsRoute() {
+func (s *RouteTestSuite) TestGetSessionsRouteNoData() {
 	router := SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -51,7 +51,7 @@ func (s *RouteTestSuite) TestGetSessionsRoute() {
 
 }
 
-func (s *RouteTestSuite) TestGetUsersRoute() {
+func (s *RouteTestSuite) TestGetUsersRouteNoData() {
 	router := SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -70,22 +70,19 @@ func (s *RouteTestSuite) TestGetUsersRoute() {
 
 }
 
-func (s *RouteTestSuite) TestGetSessionFeedbackRoute() {
+func (s *RouteTestSuite) TestGetSessionFeedbackRouteNoData() {
 	router := SetupRouter()
 	w := httptest.NewRecorder()
-	if req, err := http.NewRequest("GET", "/sessions/feedback", nil); err == nil {
-		router.ServeHTTP(w, req)
-		s.Equal(200, w.Code)
-		// Test empty response - should always be empty array
-		var response GetFeedbackJSON
-		err2 := json.Unmarshal([]byte(w.Body.String()), &response)
-		s.NoError(err2)
+	req1, err1 := http.NewRequest("GET", "/sessions/feedback", nil)
+	router.ServeHTTP(w, req1)
+	s.NoError(err1)
+	s.Equal(200, w.Code)
+	// Test empty response - should always be empty array
+	var response GetFeedbackJSON
+	err2 := json.Unmarshal([]byte(w.Body.String()), &response)
+	s.NoError(err2)
 
-		// TODO: Add db setup/teardown to the test logic (find the best place for this)
-		// Ensure the Feedback array is empty when the DB is in a fresh state
-		s.Assert().Equal(response.Feedback, make([]SessionFeedback, 0))
-	} else {
-		// If an error happened, then this assertion will always fail - added here simply for test failure reporting
-		s.NoError(err)
-	}
+	// TODO: Add db setup/teardown to the test logic (find the best place for this)
+	// Ensure the Feedback array is empty when the DB is in a fresh state
+	s.Assert().Equal(response.Feedback, make([]SessionFeedback, 0))
 }
