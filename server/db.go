@@ -8,9 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// CustomModel is the base model struct for all models used in this project - it emulates gorm.Model except that it uses a UUID for the ID field
 type CustomModel struct {
-	ID        uuid.UUID `gorm:"type:uuid;primary_key;" json:"id"`
 	CreatedAt time.Time `gorm:"autoCreateTime:mili"  json:"createdAt"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime:mili"  json:"updatedAt"`
 	DeletedAt time.Time `json:"deletedAt"`
@@ -24,18 +22,21 @@ type Counter struct {
 
 // User database model representing the data collected for a user
 type User struct {
+	ID uuid.UUID `gorm:"type:uuid;primary_key;" json:"id"`
 	CustomModel
 	SessionFeedback []SessionFeedback `json:"sessionFeedback"`
 }
 
 // Session database model representing the data for an arbitrary game session
 type Session struct {
+	ID uuid.UUID `gorm:"type:uuid;primary_key;" json:"id"`
 	CustomModel
 	SessionFeedback []SessionFeedback `json:"feedback"`
 }
 
 // CreateSessionFeedbackInput represents the fields expected when the session feedback endpoint is hit with a POST request
 type CreateSessionFeedbackInput struct {
+	ID uuid.UUID `gorm:"type:uuid;primary_key;" json:"id"`
 	// The ID of the session being reviewed
 	SessionID uuid.UUID `json:"sessionId"`
 	// The ID of the user who left the review
@@ -44,8 +45,14 @@ type CreateSessionFeedbackInput struct {
 	Comment string    `json:"comment"`
 }
 
+// Input type modeling the expected input in the POST body when deleting a resource
+type DeleteResourceInput struct {
+	ID uuid.UUID `json:"id"`
+}
+
 // SessionFeedback database model representing the data for an arbitrary feedback response from a user about an arbitrary game session
 type SessionFeedback struct {
+	ID uuid.UUID `gorm:"type:uuid;primary_key;" json:"id"`
 	CustomModel
 	// A rating of 1 to 5 (1 being the "worst", 5 being the "best")
 	Rating int `gorm:"not null" json:"rating"`
