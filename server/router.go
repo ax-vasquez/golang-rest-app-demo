@@ -54,140 +54,212 @@ func addDatabaseMiddleware(r *gin.Engine) {
 	})
 }
 
-// adds routes to the server
-func addRoutes(r *gin.Engine) {
-	// Test ping route
-	// r.GET("/ping", func(c *gin.Context) {
-	// 	var counter Counter
-	// 	if err := GetDB(c).FirstOrCreate(&counter).Error; err != nil {
-	// 		panic(err)
-	// 	}
-	// 	counter.Visit++
-	// 	if err := GetDB(c).Save(&counter).Error; err != nil {
-	// 		panic(err)
-	// 	}
-	// 	c.JSON(200, &counter)
-	// })
-	// Test ping route
-	r.GET("/ping", func(c *gin.Context) {
-		c.String(200, "ping")
-	})
-	// List all sessions
-	r.GET("/sessions", func(c *gin.Context) {
-		var records []Session
-		// TODO: Figure out how to get this to return related records (or figure out if there is a problem with adding the related records)
-		GetDB(c).Find(&records)
-		c.JSON(200, gin.H{"sessions": &records})
-	})
-	// Create an arbitrary game session
-	r.POST("/sessions/create", func(c *gin.Context) {
-		var session Session
-		session.ID = uuid.NewV4()
-		if err := GetDB(c).Create(&session).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(200, gin.H{"session": &session})
-	})
-	// TODO: Look into how to do wildcards in routes with gin
-	// Leave feedback for a given session ID
-	r.POST("/sessions/feedback/create", func(c *gin.Context) {
-		var input CreateSessionFeedbackInput
-		if err := c.ShouldBindJSON(&input); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		// If any required fields are invalid, return before doing any processing
-		if input.Rating < 1 || input.Rating > 5 || input.SessionID == uuid.Nil || input.UserID == uuid.Nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid values for query parameters - sessionId and userId must be defined and rating must be 1 - 5"})
-			return
-		}
-		var sessionFeedback SessionFeedback
-		GetDB(c).Where(&SessionFeedback{SessionID: input.SessionID, UserID: input.UserID}).Find(&sessionFeedback)
-		// Stop execution early (saving processing time) if the user has already provided feedback for this Session
-		if sessionFeedback.ID != uuid.Nil {
-			c.JSON(http.StatusForbidden, gin.H{"success": false, "message": "This user has already provided feedback for the given session"})
-			return
-		}
-		var session Session
-		// Defines session with the first Session record found by the given input.SessionID
-		GetDB(c).First(&session, input.SessionID)
-		var user User
-		// Defines user with the first User record found by the given input.UserID
-		GetDB(c).First(&user, input.UserID)
-		sessionFeedback.ID = uuid.NewV4()
-		sessionFeedback.Rating = input.Rating
-		sessionFeedback.Comment = input.Comment
-		session.SessionFeedback = []SessionFeedback{sessionFeedback}
-		// Update the session with the feedback (inserts the feedback record into the DB)
-		if err := GetDB(c).Updates(&session).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		// Update the user with the feedback (doesn't perform insert this time since it already exists - just updates the User record)
-		user.SessionFeedback = []SessionFeedback{sessionFeedback}
-		if err := GetDB(c).Updates(&user).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(200, gin.H{"success": true, "message": "Thank you for your feedback!"})
-	})
-	// Get session feedback
-	r.GET("/sessions/feedback", func(c *gin.Context) {
-		var records []SessionFeedback
-		query := c.Request.URL.Query()
-		if sessionID := query["sessionId"]; sessionID != nil {
-			if rating := query["rating"]; rating != nil {
-				if ratingInt, err := strconv.Atoi(rating[0]); err == nil {
-					if ratingInt > 5 || ratingInt < 1 {
-						c.JSON(http.StatusBadRequest, gin.H{"error": "Rating must be between 1 and 5"})
-						return
-					}
-					GetDB(c).Where("session_id = ? AND rating = ?", sessionID[0], ratingInt).Find(&records)
-					c.JSON(200, gin.H{"feedback": &records})
-					return
-				} else if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+func ping(c *gin.Context) {
+	c.String(200, "ping")
+	return
+}
+
+func getSessionFeedback(c *gin.Context) {
+	var records []SessionFeedback
+	query := c.Request.URL.Query()
+	if sessionID := query["sessionId"]; sessionID != nil {
+		if rating := query["rating"]; rating != nil {
+			if ratingInt, err := strconv.Atoi(rating[0]); err == nil {
+				if ratingInt > 5 || ratingInt < 1 {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "Rating must be between 1 and 5"})
 					return
 				}
-				GetDB(c).Where("session_id = ?", sessionID[0]).Find(&records)
+				GetDB(c).Where("session_id = ? AND rating = ?", sessionID[0], ratingInt).Find(&records)
 				c.JSON(200, gin.H{"feedback": &records})
 				return
+			} else if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
 			}
-		} else {
-			if rating := query["rating"]; rating != nil {
-				if ratingInt, err := strconv.Atoi(rating[0]); err == nil {
-					if ratingInt > 5 || ratingInt < 1 {
-						c.JSON(http.StatusBadRequest, gin.H{"error": "Rating must be between 1 and 5"})
-						return
-					}
-					GetDB(c).Where("rating = ?", ratingInt).Find(&records)
-					c.JSON(200, gin.H{"feedback": &records})
-					return
-				} else if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					return
-				}
-			}
-			GetDB(c).Find(&records)
+			GetDB(c).Where("session_id = ?", sessionID[0]).Find(&records)
 			c.JSON(200, gin.H{"feedback": &records})
 			return
 		}
-	})
-	// List all users
-	r.GET("/users", func(c *gin.Context) {
-		var records []User
-		GetDB(c).Find(&records)
-		c.JSON(200, gin.H{"users": &records})
-	})
-	// Create an arbitrary user
-	r.POST("/users/create", func(c *gin.Context) {
-		var user User
-		user.ID = uuid.NewV4()
-		if err := GetDB(c).Create(&user).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
+	} else {
+		if rating := query["rating"]; rating != nil {
+			if ratingInt, err := strconv.Atoi(rating[0]); err == nil {
+				if ratingInt > 5 || ratingInt < 1 {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "Rating must be between 1 and 5"})
+					return
+				}
+				GetDB(c).Where("rating = ?", ratingInt).Find(&records)
+				c.JSON(200, gin.H{"feedback": &records})
+				return
+			} else if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
 		}
-		c.JSON(200, gin.H{"user": &user})
-	})
+		GetDB(c).Find(&records)
+		c.JSON(200, gin.H{"feedback": &records})
+		return
+	}
+}
+
+func getResources(c *gin.Context) {
+	var users []User
+	var sessions []Session
+	switch c.FullPath() {
+	case "/sessions":
+		GetDB(c).Where(&Session{}).Find(&sessions)
+		c.JSON(http.StatusOK, gin.H{"sessions": sessions})
+		return
+	case "/users":
+		GetDB(c).Where(&User{}).Find(&users)
+		c.JSON(http.StatusOK, gin.H{"users": users})
+		return
+	case "/sessions/feedback":
+		getSessionFeedback(c)
+		return
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unrecognized route!"})
+		return
+	}
+}
+
+func createSession(c *gin.Context) {
+	var session Session
+	session.ID = uuid.NewV4()
+	if err := GetDB(c).Create(&session).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"session": &session})
+	return
+}
+
+func deleteSession(c *gin.Context) {
+	query := c.Request.URL.Query()
+	var session Session
+	if err := GetDB(c).Where("id = ?", query["id"]).Find(&session).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	// Check if the user even exists - return early if not
+	if session.ID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Session does not exist"})
+		return
+	}
+	// Attempt to delete the user (return an error if something bad happens)
+	if err := GetDB(c).Delete(&Session{}, query["id"]).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Session deleted successfully!"})
+}
+
+func createSessionFeedback(c *gin.Context) {
+	var input CreateSessionFeedbackInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	// If any required fields are invalid, return before doing any processing
+	if input.Rating < 1 || input.Rating > 5 || input.SessionID == uuid.Nil || input.UserID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid values for query parameters - sessionId and userId must be defined and rating must be 1 - 5"})
+		return
+	}
+	var sessionFeedback SessionFeedback
+	GetDB(c).Where(&SessionFeedback{SessionID: input.SessionID, UserID: input.UserID}).Find(&sessionFeedback)
+	// Stop execution early (saving processing time) if the user has already provided feedback for this Session
+	if sessionFeedback.ID != uuid.Nil {
+		c.JSON(http.StatusForbidden, gin.H{"success": false, "message": "This user has already provided feedback for the given session"})
+		return
+	}
+	var session Session
+	// Defines session with the first Session record found by the given input.SessionID
+	GetDB(c).First(&session, input.SessionID)
+	var user User
+	// Defines user with the first User record found by the given input.UserID
+	GetDB(c).First(&user, input.UserID)
+	sessionFeedback.ID = uuid.NewV4()
+	sessionFeedback.Rating = input.Rating
+	sessionFeedback.Comment = input.Comment
+	session.SessionFeedback = []SessionFeedback{sessionFeedback}
+	// Update the session with the feedback (inserts the feedback record into the DB)
+	if err := GetDB(c).Updates(&session).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	// Update the user with the feedback (doesn't perform insert this time since it already exists - just updates the User record)
+	user.SessionFeedback = []SessionFeedback{sessionFeedback}
+	if err := GetDB(c).Updates(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"success": true, "message": "Thank you for your feedback!"})
+	return
+}
+
+func deleteSessionFeedback(c *gin.Context) {
+	query := c.Request.URL.Query()
+	var sessionFeedback SessionFeedback
+	if err := GetDB(c).Where("id = ?", query["id"]).Find(&sessionFeedback).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	// Check if the user even exists - return early if not
+	if sessionFeedback.ID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "SessionFeedback does not exist"})
+		return
+	}
+	// Attempt to delete the user (return an error if something bad happens)
+	if err := GetDB(c).Delete(&SessionFeedback{}, query["id"]).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "SessionFeedback deleted successfully!"})
+	return
+}
+
+func createUser(c *gin.Context) {
+	var user User
+	user.ID = uuid.NewV4()
+	if err := GetDB(c).Create(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"user": &user})
+	return
+}
+
+func deleteUser(c *gin.Context) {
+	query := c.Request.URL.Query()
+	var user User
+	if err := GetDB(c).Where("id = ?", query["id"]).Find(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	// Check if the user even exists - return early if not
+	if user.ID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "User does not exist"})
+		return
+	}
+	// Attempt to delete the user (return an error if something bad happens)
+	if err := GetDB(c).Delete(&User{}, query["id"]).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "User deleted successfully!"})
+	return
+}
+
+// adds routes to the server
+func addRoutes(r *gin.Engine) {
+	r.GET("/ping", ping)
+	r.GET("/users", getResources)
+	r.GET("/sessions", getResources)
+	// TODO: Look into how to do wildcards in routes with gin
+	r.GET("/sessions/feedback", getResources)
+	r.POST("/users/create", createUser)
+	r.POST("/sessions/create", createSession)
+	r.POST("/sessions/feedback/create", createSessionFeedback)
+	r.DELETE("/users", deleteUser)
+	r.DELETE("/sessions", deleteSession)
+	r.DELETE("/sessions/feedback", deleteSessionFeedback)
 }
