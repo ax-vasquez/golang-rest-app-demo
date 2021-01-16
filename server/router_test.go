@@ -86,6 +86,7 @@ type GetFeedbackJSON struct {
 // TestGetSessionsRouteNoData tests that the /sessions route behaves as expected when there are no Session records
 func (s *RouteTestSuite) TestGetSessionsRouteNoData() {
 
+
 	w := httptest.NewRecorder()
 	req, err := http.NewRequest("GET", "/sessions", nil)
 	s.NoError(err)

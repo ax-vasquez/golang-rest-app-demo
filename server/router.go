@@ -129,6 +129,7 @@ func createSession(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"session": &session})
+
 }
 
 func deleteSession(c *gin.Context) {
@@ -249,7 +250,6 @@ func deleteUser(c *gin.Context) {
 
 // adds routes to the server
 func addRoutes(r *gin.Engine) {
-
 	r.GET("/ping", ping)
 	r.GET("/users", getResources)
 	r.GET("/sessions", getResources)
