@@ -1,6 +1,6 @@
 # README
 
-This repository is modeled loosely after a takehome task I had for an interview I did with Unity Technologies. As a Node.js developer, I did the task in Node, but I would like to learn Golang. This seemed like a perfect opportunity to leverage my REST experience so that I could learn Golang.
+This repository is modeled loosely after a practice exercise I came across. As a Node.js developer, I did the task in Node, but I would like to learn Golang. This seemed like a perfect opportunity to leverage my REST experience so that I could learn Golang.
 
 The task is to do the following:
 1. [x] An endpoint where users can leave feedback for a specific game session

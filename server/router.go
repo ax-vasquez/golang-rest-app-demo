@@ -2,10 +2,10 @@ package server
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	uuid "github.com/satori/go.uuid"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -36,10 +36,10 @@ func GetDB(c *gin.Context) *gorm.DB {
 
 // adds basic middleware
 func addMiddleware(r *gin.Engine) {
-	// Global middleware
-	// Logger middleware will write the logs to gin.DefaultWriter even if you set with GIN_MODE=release.
-	// By default gin.DefaultWriter = os.Stdout
-	r.Use(gin.Logger())
+	// Set logrus to use JSON formatting (e.g., "structured formatting") - more easily-consumable by services like GCP Log services
+	log.SetFormatter(&log.JSONFormatter{})
+	// Custom logging middleware
+	r.Use(Logger())
 
 	// Recovery middleware recovers from any panics and writes a 500 if there was one.
 	r.Use(gin.Recovery())
@@ -54,67 +54,66 @@ func addDatabaseMiddleware(r *gin.Engine) {
 	})
 }
 
+type SessionGetter func()
+type UserGetter func()
+
+// In production, this init method should be called with DB-connected code - in test, it should init with mocked calls
+type ResourceGetterInit func()
+
+// ResourceGetter is linked to the DB in production and mocked in tests
+type ResourceGetter struct {
+	init              ResourceGetterInit
+	sessions          SessionGetter
+	session_feedbacks SessionFeedbackGetter
+	users             UserGetter
+}
+
 func ping(c *gin.Context) {
 	c.String(200, "ping")
 	return
 }
 
-func getSessionFeedback(c *gin.Context) {
-	var records []SessionFeedback
-	query := c.Request.URL.Query()
-	if sessionID := query["sessionId"]; sessionID != nil {
-		if rating := query["rating"]; rating != nil {
-			if ratingInt, err := strconv.Atoi(rating[0]); err == nil {
-				if ratingInt > 5 || ratingInt < 1 {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Rating must be between 1 and 5"})
-					return
-				}
-				GetDB(c).Where("session_id = ? AND rating = ?", sessionID[0], ratingInt).Find(&records)
-				c.JSON(200, gin.H{"feedback": &records})
-				return
-			} else if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-			GetDB(c).Where("session_id = ?", sessionID[0]).Find(&records)
-			c.JSON(200, gin.H{"feedback": &records})
-			return
-		}
-	} else {
-		if rating := query["rating"]; rating != nil {
-			if ratingInt, err := strconv.Atoi(rating[0]); err == nil {
-				if ratingInt > 5 || ratingInt < 1 {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Rating must be between 1 and 5"})
-					return
-				}
-				GetDB(c).Where("rating = ?", ratingInt).Find(&records)
-				c.JSON(200, gin.H{"feedback": &records})
-				return
-			} else if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-		}
-		GetDB(c).Find(&records)
-		c.JSON(200, gin.H{"feedback": &records})
-		return
+// ratingIsValid checks if a given value is between 1 and 5 (the accepted rating range)
+func ratingIsValid(i int) bool {
+	if i >= 1 && i <= 5 {
+		return true
 	}
+	return false
 }
 
+func initResourceGetter() *ResourceGetter {
+	return &ResourceGetter{}
+}
+
+// getAllSessions gets all Session records
+func getAllSessions(c *gin.Context, records *[]Session) {
+	// SELECT * FROM sessions
+	GetDB(c).Find(&records)
+}
+
+// getAllUsers gets all User records
+func getAllUsers(c *gin.Context, records *[]User) {
+	// SELECT * FROM users
+	GetDB(c).Find(&records)
+}
+
+// TODO: Make all endpoints support filtering (eventually)
+// getResources is a convenience method used to contain the logic (at a high level) for all GET endpoints
 func getResources(c *gin.Context) {
 	var users []User
 	var sessions []Session
 	switch c.FullPath() {
 	case "/sessions":
-		GetDB(c).Where(&Session{}).Find(&sessions)
+		getAllSessions(c, &sessions)
 		c.JSON(http.StatusOK, gin.H{"sessions": sessions})
 		return
 	case "/users":
-		GetDB(c).Where(&User{}).Find(&users)
+		getAllUsers(c, &users)
 		c.JSON(http.StatusOK, gin.H{"users": users})
 		return
 	case "/sessions/feedback":
-		getSessionFeedback(c)
+		sfg := NewSessionFeedbackGetter(getAllSessionFeedback, getSessionFeedbackByRating, getSessionFeedbackBySessionId, getSessionFeedbackBySessionIdAndRating)
+		getSessionFeedback(c, *sfg)
 		return
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Unrecognized route!"})
@@ -130,7 +129,7 @@ func createSession(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"session": &session})
-	return
+
 }
 
 func deleteSession(c *gin.Context) {
