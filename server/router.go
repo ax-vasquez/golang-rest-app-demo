@@ -99,7 +99,7 @@ func getAllUsers(c *gin.Context, records *[]User) {
 
 // TODO: Make all endpoints support filtering (eventually)
 // getResources is a convenience method used to contain the logic (at a high level) for all GET endpoints
-func getResources(c *gin.Context) {
+func GetResources(c *gin.Context) {
 	var users []User
 	var sessions []Session
 	switch c.FullPath() {
@@ -121,7 +121,7 @@ func getResources(c *gin.Context) {
 	}
 }
 
-func createSession(c *gin.Context) {
+func CreateSession(c *gin.Context) {
 	var session Session
 	session.ID = uuid.NewV4()
 	if err := GetDB(c).Create(&session).Error; err != nil {
@@ -132,7 +132,7 @@ func createSession(c *gin.Context) {
 
 }
 
-func deleteSession(c *gin.Context) {
+func DeleteSession(c *gin.Context) {
 	query := c.Request.URL.Query()
 	var session Session
 	if err := GetDB(c).Where("id = ?", query["id"]).Find(&session).Error; err != nil {
@@ -152,7 +152,7 @@ func deleteSession(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Session deleted successfully!"})
 }
 
-func createSessionFeedback(c *gin.Context) {
+func CreateSessionFeedback(c *gin.Context) {
 	var input CreateSessionFeedbackInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -191,11 +191,15 @@ func createSessionFeedback(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"success": true, "message": "Thank you for your feedback!"})
+	if err := GetDB(c).Where("id = ?", sessionFeedback.ID).Find(&sessionFeedback).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"success": true, "message": "Thank you for your feedback!", "sessionFeedback": &sessionFeedback})
 	return
 }
 
-func deleteSessionFeedback(c *gin.Context) {
+func DeleteSessionFeedback(c *gin.Context) {
 	query := c.Request.URL.Query()
 	var sessionFeedback SessionFeedback
 	if err := GetDB(c).Where("id = ?", query["id"]).Find(&sessionFeedback).Error; err != nil {
@@ -216,7 +220,7 @@ func deleteSessionFeedback(c *gin.Context) {
 	return
 }
 
-func createUser(c *gin.Context) {
+func CreateUser(c *gin.Context) {
 	var user User
 	user.ID = uuid.NewV4()
 	if err := GetDB(c).Create(&user).Error; err != nil {
@@ -227,7 +231,7 @@ func createUser(c *gin.Context) {
 	return
 }
 
-func deleteUser(c *gin.Context) {
+func DeleteUser(c *gin.Context) {
 	query := c.Request.URL.Query()
 	var user User
 	if err := GetDB(c).Where("id = ?", query["id"]).Find(&user).Error; err != nil {
@@ -251,14 +255,14 @@ func deleteUser(c *gin.Context) {
 // adds routes to the server
 func addRoutes(r *gin.Engine) {
 	r.GET("/ping", ping)
-	r.GET("/users", getResources)
-	r.GET("/sessions", getResources)
+	r.GET("/users", GetResources)
+	r.GET("/sessions", GetResources)
 	// TODO: Look into how to do wildcards in routes with gin
-	r.GET("/sessions/feedback", getResources)
-	r.POST("/users/create", createUser)
-	r.POST("/sessions/create", createSession)
-	r.POST("/sessions/feedback/create", createSessionFeedback)
-	r.DELETE("/users", deleteUser)
-	r.DELETE("/sessions", deleteSession)
-	r.DELETE("/sessions/feedback", deleteSessionFeedback)
+	r.GET("/sessions/feedback", GetResources)
+	r.POST("/users/create", CreateUser)
+	r.POST("/sessions/create", CreateSession)
+	r.POST("/sessions/feedback/create", CreateSessionFeedback)
+	r.DELETE("/users", DeleteUser)
+	r.DELETE("/sessions", DeleteSession)
+	r.DELETE("/sessions/feedback", DeleteSessionFeedback)
 }
