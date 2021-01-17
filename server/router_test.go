@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/suite"
@@ -20,7 +19,6 @@ import (
 type RouteTestSuite struct {
 	suite.Suite
 	router *gin.Engine
-	mock   sqlmock.Sqlmock
 }
 
 type KeyValuePair struct {
